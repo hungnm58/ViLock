@@ -17,6 +17,8 @@ Automatically lock your MacBook screen when no face is detected via camera.
 
 ## Installation
 
+### 1. Clone and setup
+
 ```bash
 git clone https://github.com/hungnm58/ViLock.git
 cd ViLock
@@ -25,48 +27,92 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+### 2. Grant Camera permission
+
+On first run, macOS will prompt for Camera access:
+- **System Settings → Privacy & Security → Camera** → Enable for Terminal/iTerm
+
 ## Usage
 
+### Run the app
+
 ```bash
+cd /path/to/ViLock
 source venv/bin/activate
 python -m src.app
 ```
 
-## Menu Bar Controls
+### Menu Bar Controls
 
-| Feature | Description |
-|---------|-------------|
-| Start/Stop | Toggle face detection monitoring |
-| Register Face | Register face for auto-unlock |
-| Set Password | Set unlock password |
-| Telegram Config | Configure Telegram notifications |
-| Lock Now | Lock screen immediately |
+Icon 🔓 appears in menu bar:
 
-## Configuration
+| Menu | Function |
+|------|----------|
+| **Start Monitoring** | Start face detection |
+| **Pause** | Pause monitoring |
+| **Timeout** | Lock delay time (1-60s) |
+| **🔑 Set Password** | Set unlock password |
+| **👤 Register Face** | Register face (SPACE to capture, ESC to cancel) |
+| **📱 Telegram** | Configure Telegram notifications |
+| **🔒 Lock Now** | Lock screen immediately |
+| **Quit** | Exit app |
 
-Data stored in `./data/`:
+### Register Face
 
-| File | Content |
-|------|---------|
-| `settings.plist` | App configuration |
-| `faces/registered_face.jpg` | Registered face image |
-| `faces/face_encoding.npy` | Face encoding vector |
+1. Click **👤 Register Face**
+2. Camera preview opens
+3. Press **SPACE** to capture (or **ESC** to cancel)
+4. Shows "Save successful!" when done
 
-## Project Structure
+### Configure Telegram Notifications
+
+1. Create bot: Chat with [@BotFather](https://t.me/BotFather) → `/newbot` → Get **Bot Token**
+2. Get Chat ID: Chat with [@userinfobot](https://t.me/userinfobot) → Get **Chat ID**
+3. In app: **📱 Telegram → Configure** → Enter Token and Chat ID
+4. Toggle notifications: **Notify Unlock** / **Notify Lock**
+
+### How it works
 
 ```
-ViLock/
-├── src/
-│   ├── app.py              # Entry point
-│   ├── menu_bar.py         # Menu bar app (rumps)
-│   ├── detector.py         # MediaPipe face detection
-│   ├── face_verifier.py    # Face verification
-│   ├── notifier.py         # Telegram notifications
-│   └── settings.py         # Settings persistence
-├── data/                   # User data (gitignored)
-├── assets/                 # ML models
-└── requirements.txt
+Face detected → 🔓 Unlocked
+       ↓
+No face (timeout seconds)
+       ↓
+🔒 Screen locked
+       ↓
+Registered face detected → Auto unlock
 ```
+
+## Data Storage
+
+```
+./data/
+├── settings.plist              # Configuration
+└── faces/
+    ├── registered_face.jpg     # Face image
+    └── face_encoding.npy       # Face encoding
+```
+
+## Useful Commands
+
+```bash
+# Run app
+python -m src.app
+
+# Kill running app
+pkill -f 'python.*src'
+
+# Restart app
+pkill -f 'python.*src'; sleep 1; python -m src.app
+
+# View settings
+/usr/libexec/PlistBuddy -c "Print" ./data/settings.plist
+```
+
+## Exit App
+
+- Click **Quit** in menu bar
+- Or press **Ctrl+C** in terminal
 
 ## License
 
