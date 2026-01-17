@@ -6,7 +6,6 @@ Automatically lock your MacBook screen when no face is detected via camera.
 
 - **Face Detection** - MediaPipe with 95%+ accuracy
 - **Face Verification** - Auto-unlock when registered face detected
-- **Bluetooth Unlock** - Unlock when iPhone/Bluetooth device nearby
 - **Telegram Notifications** - Get notified on lock/unlock events
 - **Menu Bar App** - Runs in background with menu bar controls
 
@@ -62,7 +61,6 @@ ViLock/
 │   ├── menu_bar.py         # Menu bar app (rumps)
 │   ├── detector.py         # MediaPipe face detection
 │   ├── face_verifier.py    # Face verification
-│   ├── bluetooth_unlocker.py # Bluetooth proximity unlock
 │   ├── notifier.py         # Telegram notifications
 │   └── settings.py         # Settings persistence
 ├── data/                   # User data (gitignored)
