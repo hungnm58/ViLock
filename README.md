@@ -1,112 +1,74 @@
-# AutoLock - macOS Auto Screen Lock
+# ViLock - Face Detection Screen Lock for macOS
 
-Automatically locks your Mac screen when no face is detected via camera.
+Ứng dụng tự động khóa màn hình MacBook khi không phát hiện khuôn mặt qua camera.
 
-## Features
+## Tính năng
 
-- **MediaPipe Face Detection** - 95%+ accuracy, works with angles and low light
-- **Menu Bar App** - Runs in background with quick controls
-- **Preferences Window** - Configure timeout, sensitivity, camera
-- **Settings Persistence** - Settings saved across restarts
-- **Auto-Start** - Optional launch at login
-- **Packagable** - Can be bundled as .app with py2app
+- **Face Detection** - Sử dụng MediaPipe với độ chính xác 95%+
+- **Face Verification** - Xác thực khuôn mặt để mở khóa tự động
+- **Bluetooth Unlock** - Mở khóa khi iPhone/thiết bị Bluetooth ở gần
+- **Telegram Notifications** - Nhận thông báo khi lock/unlock
+- **Menu Bar App** - Chạy ngầm với icon trên thanh menu
 
-## Requirements
+## Yêu cầu
 
 - macOS 10.14+
 - Python 3.9+
 - Camera access permission
 
-## Installation
-
-### 1. Clone and setup environment
+## Cài đặt
 
 ```bash
-cd autolock
+git clone https://github.com/user/ViLock.git
+cd ViLock
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Grant camera permission
-
-When first run, macOS will prompt for camera access. Go to:
-**System Preferences → Privacy & Security → Camera** → Allow Terminal/Python
-
-## Usage
-
-### Run menu bar app
+## Sử dụng
 
 ```bash
 source venv/bin/activate
 python -m src.app
 ```
 
-Or with the old CLI version:
-```bash
-python auto_lock.py -d  # debug mode with camera preview
-```
+## Menu Bar Controls
 
-### Menu Bar Controls
+| Chức năng | Mô tả |
+|-----------|-------|
+| Start/Stop | Bật/tắt theo dõi khuôn mặt |
+| Register Face | Đăng ký khuôn mặt để unlock |
+| Set Password | Đặt mật khẩu unlock |
+| Telegram Config | Cấu hình thông báo Telegram |
+| Lock Now | Khóa màn hình ngay lập tức |
 
-- **Start/Stop Monitoring** - Toggle face detection
-- **Pause/Resume** - Temporarily pause without stopping
-- **Timeout** - Set lock delay (5-60 seconds)
-- **Preferences** - Open settings window
-- **Lock Now** - Immediate lock
+## Cấu hình
 
-### Settings
+Dữ liệu lưu trong `./data/`:
 
-Settings stored at: `~/Library/Preferences/com.autolock.plist`
+| File | Nội dung |
+|------|----------|
+| `settings.plist` | Cấu hình ứng dụng |
+| `faces/registered_face.jpg` | Ảnh khuôn mặt đã đăng ký |
+| `faces/face_encoding.npy` | Face encoding vector |
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| timeout | 10s | Seconds without face before lock |
-| confidence_threshold | 0.5 | Detection sensitivity (0.3-0.9) |
-| camera_index | 0 | Camera device to use |
-| start_at_login | false | Auto-start when macOS boots |
-
-## Build .app Bundle
-
-```bash
-pip install py2app
-python setup.py py2app
-# Output: dist/AutoLock.app
-```
-
-## Project Structure
+## Cấu trúc project
 
 ```
-autolock/
+ViLock/
 ├── src/
-│   ├── app.py          # Entry point
-│   ├── detector.py     # MediaPipe face detection
-│   ├── menu_bar.py     # Rumps menu bar app
-│   ├── preferences.py  # Tkinter settings window
-│   ├── settings.py     # Plistlib persistence
-│   └── autostart.py    # LaunchAgent management
-├── assets/
-│   └── blaze_face_short_range.tflite
-├── auto_lock.py        # Legacy CLI version
-├── setup.py            # py2app config
+│   ├── app.py              # Entry point
+│   ├── menu_bar.py         # Menu bar app (rumps)
+│   ├── detector.py         # MediaPipe face detection
+│   ├── face_verifier.py    # Face verification
+│   ├── bluetooth_unlocker.py # Bluetooth proximity unlock
+│   ├── notifier.py         # Telegram notifications
+│   └── settings.py         # Settings persistence
+├── data/                   # User data (gitignored)
+├── assets/                 # ML models
 └── requirements.txt
 ```
-
-## Troubleshooting
-
-### Camera not working
-```bash
-python3 -c "import cv2; print(cv2.VideoCapture(0).isOpened())"
-```
-Check camera permissions in System Preferences.
-
-### Detection inaccurate
-- Increase lighting
-- Adjust `confidence_threshold` in Preferences (lower = more sensitive)
-- Ensure face is visible to camera
-
-### App doesn't start at login
-Run the app once and enable "Start at login" in Preferences. This creates a LaunchAgent at `~/Library/LaunchAgents/com.autolock.plist`.
 
 ## License
 
