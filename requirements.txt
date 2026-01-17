@@ -1,0 +1,14 @@
+# AutoLock v2.0 Dependencies
+
+# Core
+opencv-python>=4.8.0
+numpy>=1.24.0
+
+# Face detection (recommended for 95%+ accuracy)
+mediapipe>=0.10.0
+
+# macOS menu bar
+rumps>=0.4.0
+
+# Development only (for building .app bundle)
+# py2app>=0.28
