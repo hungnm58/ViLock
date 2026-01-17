@@ -1,32 +1,32 @@
 # ViLock - Face Detection Screen Lock for macOS
 
-Ứng dụng tự động khóa màn hình MacBook khi không phát hiện khuôn mặt qua camera.
+Automatically lock your MacBook screen when no face is detected via camera.
 
-## Tính năng
+## Features
 
-- **Face Detection** - Sử dụng MediaPipe với độ chính xác 95%+
-- **Face Verification** - Xác thực khuôn mặt để mở khóa tự động
-- **Bluetooth Unlock** - Mở khóa khi iPhone/thiết bị Bluetooth ở gần
-- **Telegram Notifications** - Nhận thông báo khi lock/unlock
-- **Menu Bar App** - Chạy ngầm với icon trên thanh menu
+- **Face Detection** - MediaPipe with 95%+ accuracy
+- **Face Verification** - Auto-unlock when registered face detected
+- **Bluetooth Unlock** - Unlock when iPhone/Bluetooth device nearby
+- **Telegram Notifications** - Get notified on lock/unlock events
+- **Menu Bar App** - Runs in background with menu bar controls
 
-## Yêu cầu
+## Requirements
 
 - macOS 10.14+
 - Python 3.9+
 - Camera access permission
 
-## Cài đặt
+## Installation
 
 ```bash
-git clone https://github.com/user/ViLock.git
+git clone https://github.com/hungnm58/ViLock.git
 cd ViLock
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Sử dụng
+## Usage
 
 ```bash
 source venv/bin/activate
@@ -35,25 +35,25 @@ python -m src.app
 
 ## Menu Bar Controls
 
-| Chức năng | Mô tả |
-|-----------|-------|
-| Start/Stop | Bật/tắt theo dõi khuôn mặt |
-| Register Face | Đăng ký khuôn mặt để unlock |
-| Set Password | Đặt mật khẩu unlock |
-| Telegram Config | Cấu hình thông báo Telegram |
-| Lock Now | Khóa màn hình ngay lập tức |
+| Feature | Description |
+|---------|-------------|
+| Start/Stop | Toggle face detection monitoring |
+| Register Face | Register face for auto-unlock |
+| Set Password | Set unlock password |
+| Telegram Config | Configure Telegram notifications |
+| Lock Now | Lock screen immediately |
 
-## Cấu hình
+## Configuration
 
-Dữ liệu lưu trong `./data/`:
+Data stored in `./data/`:
 
-| File | Nội dung |
-|------|----------|
-| `settings.plist` | Cấu hình ứng dụng |
-| `faces/registered_face.jpg` | Ảnh khuôn mặt đã đăng ký |
+| File | Content |
+|------|---------|
+| `settings.plist` | App configuration |
+| `faces/registered_face.jpg` | Registered face image |
 | `faces/face_encoding.npy` | Face encoding vector |
 
-## Cấu trúc project
+## Project Structure
 
 ```
 ViLock/
