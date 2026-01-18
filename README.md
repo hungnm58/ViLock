@@ -4,8 +4,9 @@ Automatically lock your MacBook screen when no face is detected via camera.
 
 ## Features
 
-- **Face Detection** - MediaPipe with 95%+ accuracy
+- **Face Detection** - MediaPipe with 95%+ accuracy, optimized VIDEO mode
 - **Face Verification** - Auto-unlock when registered face detected
+- **Encrypted Face Data** - AES-128 encryption, key stored in macOS Keychain
 - **Telegram Notifications** - Get notified on lock/unlock events
 - **Menu Bar App** - Runs in background with menu bar controls
 
@@ -80,8 +81,14 @@ No face (timeout seconds)
        ↓
 🔒 Screen locked
        ↓
-Registered face detected → Auto unlock
+Registered face detected → Verify → Auto unlock
 ```
+
+## Security
+
+- **Face data encryption**: AES-128-CBC (Fernet) encryption
+- **Key storage**: macOS Keychain (`com.vilock.face`)
+- **Benefit**: Copying `data/` folder to another Mac won't work without Keychain access
 
 ## Data Storage
 
@@ -89,8 +96,8 @@ Registered face detected → Auto unlock
 ./data/
 ├── settings.plist              # Configuration
 └── faces/
-    ├── registered_face.jpg     # Face image
-    └── face_encoding.npy       # Face encoding
+    ├── registered_face.enc     # Encrypted face image
+    └── face_encoding.enc       # Encrypted face encoding
 ```
 
 ## Useful Commands

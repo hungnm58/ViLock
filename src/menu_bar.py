@@ -30,7 +30,7 @@ from bluetooth_unlocker import (
 )
 from face_verifier import (
     register_face, is_face_registered, delete_registered_face,
-    clear_encoding_cache, verify_face_fast
+    clear_encoding_cache, verify_face_fast, preload_model, check_face_quality
 )
 from notifier import notify_unlock, notify_lock, notify_failed_unlock
 
@@ -65,6 +65,9 @@ class AutoLockApp(rumps.App if RUMPS_AVAILABLE else object):
         self.detector = FaceDetector(
             min_confidence=self.settings['confidence_threshold']
         )
+
+        # Preload face verification model
+        preload_model()
 
         # State
         self.is_monitoring = False
@@ -282,7 +285,11 @@ class AutoLockApp(rumps.App if RUMPS_AVAILABLE else object):
             return
 
         captured_frame = None
-        window_name = "Đăng ký khuôn mặt - Nhấn SPACE để chụp, ESC để hủy"
+        window_name = "Đăng ký khuôn mặt - Giữ yên khi khung xanh, ESC để hủy"
+        good_frame_count = 0
+        bad_frame_count = 0
+        auto_capture_threshold = 20  # ~0.7s of good frames at 30fps
+        bad_tolerance = 5  # Allow 5 bad frames before resetting
 
         while True:
             ret, frame = cap.read()
@@ -292,14 +299,54 @@ class AutoLockApp(rumps.App if RUMPS_AVAILABLE else object):
             # Detect face and draw rectangle
             detected, faces = self.detector.detect(frame)
             display = frame.copy()
+            should_capture = False
 
             if detected:
-                for face in faces:
-                    x, y, w, h = int(face[0]), int(face[1]), int(face[2]), int(face[3])
-                    cv2.rectangle(display, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                cv2.putText(display, "Nhan SPACE de chup", (10, 30),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+                # Get largest face
+                face = max(faces, key=lambda f: f[2] * f[3])
+                x, y, w, h = int(face[0]), int(face[1]), int(face[2]), int(face[3])
+
+                # Extract face region with padding for quality check
+                pad = int(w * 0.3)
+                fx = max(0, x - pad)
+                fy = max(0, y - pad)
+                fw = min(frame.shape[1] - fx, w + 2 * pad)
+                fh = min(frame.shape[0] - fy, h + 2 * pad)
+                face_region = frame[fy:fy+fh, fx:fx+fw]
+
+                # Check quality
+                is_good, quality_msg = check_face_quality(face_region)
+
+                # Smoothing: don't reset immediately on bad frame
+                if is_good:
+                    good_frame_count += 1
+                    bad_frame_count = 0
+                else:
+                    bad_frame_count += 1
+                    if bad_frame_count > bad_tolerance:
+                        good_frame_count = 0  # Reset after tolerance exceeded
+
+                # Use stable state for display
+                is_stable_good = good_frame_count > 0 or bad_frame_count <= bad_tolerance
+
+                # Draw rectangle (green if stable good)
+                color = (0, 255, 0) if is_stable_good else (0, 200, 255)
+                cv2.rectangle(display, (x, y), (x + w, y + h), color, 2)
+
+                # Show quality info and countdown
+                if good_frame_count > 0:
+                    remaining = max(0, auto_capture_threshold - good_frame_count)
+                    if remaining > 0:
+                        cv2.putText(display, f"GIU YEN... ({remaining})", (10, 30),
+                                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+                    else:
+                        should_capture = True
+                else:
+                    cv2.putText(display, quality_msg, (10, 30),
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 200, 255), 2)
             else:
+                good_frame_count = 0
+                bad_frame_count = 0
                 cv2.putText(display, "Khong thay khuon mat", (10, 30),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
 
@@ -308,8 +355,9 @@ class AutoLockApp(rumps.App if RUMPS_AVAILABLE else object):
 
             if key == 27:  # ESC
                 break
-            elif key == 32 and detected:  # SPACE
+            elif should_capture or (key == 32 and detected):  # Auto or SPACE
                 captured_frame = frame.copy()
+                good_frame_count = 0  # Reset for retry
 
                 # Show saving message on screen
                 cv2.putText(display, "Dang luu...", (10, 70),
@@ -331,14 +379,16 @@ class AutoLockApp(rumps.App if RUMPS_AVAILABLE else object):
                     clear_encoding_cache()  # Refresh cache with new face
                     self._update_menu_title("👤 Khuôn mặt", "👤 Khuôn mặt: ✅ Đã đăng ký")
                     self.log("Face registered")
+                    break  # Only exit on success
                 else:
-                    # Show error message
+                    # Show error message but continue loop
                     cv2.rectangle(display, (0, 0), (display.shape[1], 80), (0, 0, 150), -1)
-                    cv2.putText(display, "Luu that bai! Thu lai.", (10, 50),
+                    cv2.putText(display, "Luu that bai! Thu lai...", (10, 50),
                                cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2)
                     cv2.imshow(window_name, display)
-                    cv2.waitKey(2000)  # Show error for 2s
-                break
+                    cv2.waitKey(1500)  # Show error briefly
+                    captured_frame = None  # Reset for retry
+                    # Continue loop - don't break
 
         cap.release()
         cv2.destroyWindow(window_name)
