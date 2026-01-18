@@ -29,8 +29,8 @@ from bluetooth_unlocker import (
     save_password_to_keychain, KEYCHAIN_ITEM
 )
 from face_verifier import (
-    register_face, verify_face, is_face_registered, delete_registered_face,
-    clear_encoding_cache
+    register_face, is_face_registered, delete_registered_face,
+    clear_encoding_cache, verify_face_fast
 )
 from notifier import notify_unlock, notify_lock, notify_failed_unlock
 
@@ -583,7 +583,9 @@ class AutoLockApp(rumps.App if RUMPS_AVAILABLE else object):
                     time.sleep(1)
                     continue
 
-                face_detected, faces = self.detector.detect(frame)
+                # Use lower resolution when locked for faster unlock
+                scale = 0.5 if self.is_real_locked else 1.0
+                face_detected, faces = self.detector.detect(frame, scale=scale)
                 current_time = time.time()
 
                 if face_detected:
@@ -592,26 +594,25 @@ class AutoLockApp(rumps.App if RUMPS_AVAILABLE else object):
                         self.log("Face detected")
                     self.face_detected = True
 
-                    # Auto-unlock when face detected and we locked the screen
-                    if self.is_real_locked:
-                        # Verify face matches registered user
-                        is_owner, similarity = verify_face(frame)
+                    # Auto-unlock when face detected and screen is locked
+                    if self.is_real_locked and len(faces) > 0:
+                        # Use largest face from MediaPipe (no extra detection)
+                        face = max(faces, key=lambda f: f[2] * f[3])
+                        is_owner, similarity = verify_face_fast(frame, face)
+                        self.log(f"Verify: owner={is_owner}, sim={similarity:.2f}")
 
-                        if is_owner:
+                        if is_owner and similarity >= 0.5:  # Require minimum similarity
                             if get_password_from_keychain():
                                 self.log(f"🔓 Verified (sim={similarity:.2f}) - Unlocking...")
                                 unlock_screen()
                                 self.is_real_locked = False
                                 self.title = self.ICON_UNLOCKED
-                                # Send Telegram notification
                                 self._send_telegram_unlock(similarity)
                             else:
-                                # No password - just reset state
                                 self.is_real_locked = False
                                 self.title = self.ICON_UNLOCKED
                         else:
                             self.log(f"⚠️ Face not matched (sim={similarity:.2f})")
-                            # Send failed unlock notification
                             self._send_telegram_failed(similarity)
                 else:
                     if self.face_detected:
@@ -633,7 +634,9 @@ class AutoLockApp(rumps.App if RUMPS_AVAILABLE else object):
             except Exception as e:
                 self.log(f"Monitor error: {e}")
 
-            time.sleep(self.settings['check_interval'])
+            # Faster checks when locked for quicker unlock
+            interval = 0.05 if self.is_real_locked else self.settings['check_interval']
+            time.sleep(interval)
 
     def _draw_debug_frame(self, frame, faces, face_detected, current_time):
         """Draw debug information on frame and display."""
@@ -692,7 +695,7 @@ class AutoLockApp(rumps.App if RUMPS_AVAILABLE else object):
             # Lock via screen saver
             subprocess.run(['open', '-a', 'ScreenSaverEngine'],
                           capture_output=True, timeout=5)
-            self.log("Screen locked - password or iPhone required")
+            self.log("Screen locked")
 
             # Send Telegram notification
             self._send_telegram_lock()

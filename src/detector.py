@@ -58,9 +58,11 @@ class FaceDetector:
         base_options = python.BaseOptions(model_asset_path=model_path)
         options = vision.FaceDetectorOptions(
             base_options=base_options,
+            running_mode=vision.RunningMode.VIDEO,  # Optimized for continuous frames
             min_detection_confidence=self.min_confidence
         )
         self.detector = vision.FaceDetector.create_from_options(options)
+        self._frame_timestamp = 0
 
     def _init_haar_cascade(self):
         """Initialize Haar Cascade fallback."""
@@ -68,29 +70,45 @@ class FaceDetector:
             cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
         )
 
-    def detect(self, frame) -> tuple[bool, list]:
+    def detect(self, frame, scale: float = 1.0) -> tuple[bool, list]:
         """Detect faces in frame.
 
         Args:
             frame: BGR image from OpenCV VideoCapture
+            scale: Scale factor for faster processing (0.5 = half resolution)
 
         Returns:
             Tuple of (face_detected: bool, faces: list of detections)
         """
+        # Downscale for faster processing if requested
+        if scale < 1.0:
+            small = cv2.resize(frame, None, fx=scale, fy=scale)
+            if self._use_mediapipe:
+                detected, faces = self._detect_mediapipe(small)
+            else:
+                detected, faces = self._detect_haar(small)
+            # Scale face coordinates back to original size
+            if detected:
+                inv_scale = 1.0 / scale
+                faces = [(int(x*inv_scale), int(y*inv_scale), int(w*inv_scale), int(h*inv_scale), c)
+                         for (x, y, w, h, c) in faces]
+            return detected, faces
+
         if self._use_mediapipe:
             return self._detect_mediapipe(frame)
         return self._detect_haar(frame)
 
     def _detect_mediapipe(self, frame) -> tuple[bool, list]:
-        """Detect faces using MediaPipe Tasks API."""
+        """Detect faces using MediaPipe Tasks API (VIDEO mode)."""
         # Convert BGR (OpenCV) to RGB
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         # Create MediaPipe Image from numpy array
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
 
-        # Run detection
-        result = self.detector.detect(mp_image)
+        # Run detection with timestamp (VIDEO mode requires monotonic timestamps)
+        self._frame_timestamp += 33  # ~30fps interval in ms
+        result = self.detector.detect_for_video(mp_image, self._frame_timestamp)
 
         if result.detections:
             faces = []
